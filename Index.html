@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vẽ Ranh VN2000 - TRUNG TÂM THÔNG TIN QUY HOẠCH TPHCM</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #00C853;
+            --secondary-color: #2196F3;
+            --autocad-color: #FF6B00;
+            --background-color: #f4f6f9;
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background: var(--background-color);
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        .leaflet-control-layers {
+            margin-top: 15px !important; 
+        }
+
+        /* GLASS MORPHISM SIDEBAR */
+        .sidebar-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 380px;
+            height: 100%;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 18px;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(224, 224, 224, 0.6);
+            border-radius: var(--border-radius);
+            padding: 12px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .section-title {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            border-bottom: 1px solid rgba(240, 240, 240, 0.8);
+            padding-bottom: 4px;
+        }
+        
+        .coords-table {
+            width: 100%;
+            max-height: 160px; 
+            overflow-y: auto;
+            border: 1px solid rgba(221, 221, 221, 0.6);
+            border-radius: 4px;
+            padding: 8px;
+            background: rgba(252, 252, 252, 0.7);
+        }
+        
+        .coord-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            gap: 4px;
+        }
+        
+        .coord-row label {
+            font-weight: 600;
+            width: 24px;
+            color: #555;
+            font-size: 11px;
+        }
+        
+        .coord-row span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .coord-row input {
+            flex: 1;
+            padding: 4px 6px;
+            border: 1px solid rgba(204, 204, 204, 0.7);
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 11px;
+            transition: border-color 0.2s;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .coord-row input:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+        }
+        
+        .coord-row button {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 4px 7px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+        
+        .coord-row button:hover {
+            background: #d32f2f;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        button {
+            padding: 9px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            flex-grow: 1;
+        }
+        
+        .btn-primary:hover {
+            background: #009624;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        }
+        
+        .btn-autocad {
+            background: var(--autocad-color);
+            color: white;
+            flex-grow: 1;
+        }
+        
+        .btn-autocad:hover {
+            background: #E55A00;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #1976D2;
+        }
+        
+        .btn-default {
+            background: #e0e0e0;
+            color: #000;
+        }
+        
+        .btn-default:hover {
+            background: #cccccc;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 90px; 
+            padding: 8px;
+            border: 1px solid rgba(204, 204, 204, 0.7);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            resize: vertical;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .options label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .options input[type="text"] {
+            padding: 5px 8px;
+            border: 1px solid rgba(204, 204, 204, 0.7);
+            border-radius: 4px;
+            width: 90px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .log-area {
+            background: rgba(240, 244, 247, 0.8);
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 90px; 
+            overflow-y: auto;
+            font-size: 10px;
+            font-family: 'Courier New', monospace;
+            color: #555;
+            border: 1px solid rgba(224, 224, 224, 0.6);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .info-box {
+            background: rgba(227, 242, 253, 0.9);
+            padding: 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--secondary-color);
+            color: #1976D2;
+        }
+        
+        .info-box strong {
+            font-weight: 700;
+        }
+
+        #serverStatus {
+            font-weight: 600;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            border-radius: 6px;
+        }
+        
+        .leaflet-control-attribution {
+            left: 0 !important;
+            right: 0 !important;
+            width: 100%; 
+            text-align: center; 
+            padding: 0 40px 5px 40px !important;
+            margin: 0;
+            background: none;
+            color: #444; 
+            font-size: 12px;
+        }
+
+        /* OPACITY SLIDER */
+        .leaflet-control-opacity-slider {
+            background: none; 
+            border: none;
+            width: 25px; 
+            height: 120px; 
+            padding: 0; 
+            box-shadow: none; 
+            margin-top: 10px; 
+        }
+        
+        .leaflet-control-opacity-container {
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            position: relative;
+        }
+        
+        .opacity-slider {
+            width: 100px; 
+            height: 10px; 
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            border-radius: 4px;
+            outline: none;
+            transition: opacity .2s;
+            transform: rotate(270deg); 
+            transform-origin: 50% 50%;
+            margin: 0;
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-left: -50px; 
+            margin-top: -5px; 
+        }
+
+        .opacity-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .opacity-slider::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .opacity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%; 
+            background: var(--secondary-color); 
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 0 8px rgba(33, 150, 243, 0.5); 
+            margin-top: -6px; 
+        }
+
+        .opacity-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
+        }
+
+        /* MEASURE TOOL */
+        .leaflet-control-measure-tool {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 35px;
+            height: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+        .leaflet-control-measure-tool:hover {
+            background-color: #f0f0f0;
+        }
+        .leaflet-control-measure-tool.active {
+            background-color: var(--autocad-color);
+            color: white;
+            box-shadow: 0 0 12px rgba(255, 107, 0, 0.7);
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="map"></div>
+    
+    <div class="sidebar-panel">
+        <h1>VẼ RANH VN2000 → AUTOCAD</h1>
+        
+        <div class="section">
+            <div class="section-title">1. Nhập toạ độ (VN2000)</div>
+            <div class="info-box">
+                <strong>Thứ tự mặc định:</strong> X (Northing) trước, Y (Easting) sau.<br>
+                **Tự động sửa lỗi:** Hệ thống sẽ tự động hoán đổi Y X thành X Y nếu phát hiện định dạng sai.
+            </div>
+            <div class="coords-table" id="coordsTable"></div>
+            <div class="button-group">
+                <button class="btn-default" onclick="addCoordEntry()">➕ Thêm ô</button>
+                <button class="btn-default" onclick="clearAllEntries()">Xóa tất cả</button>
+                <button class="btn-default" onclick="exportToTxt()">💾 Xuất .TXT</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">2. Dán text toạ độ</div>
+            <textarea id="pasteArea" placeholder="Dán tọa độ vào đây...&#10;&#10;Hệ thống sẽ tự động phát hiện X Y hay Y X.&#10;&#10;Hỗ trợ 2 định dạng:&#10;1. X Y trên cùng dòng (cách nhau bởi hàng trống cho nhiều ranh)&#10;2. Khối X riêng, khối Y riêng (cách nhau 2 dòng trống)"></textarea>
+            <div class="button-group">
+                <button class="btn-default" onclick="pasteFromClipboard()">Dán từ Clipboard</button>
+                <button class="btn-default" onclick="loadTextIntoEntries()">Đưa vào bảng nhập tay</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">3. Tùy chọn và Hành động</div>
+            
+            <div class="options" style="margin-bottom: 12px;">
+                <label>
+                    <input type="checkbox" id="closedCheck" checked>
+                    Ranh kín (Closed)
+                </label>
+                <label>
+                    Layer:
+                    <input type="text" id="layerName" value="RANH">
+                </label>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-secondary" onclick="document.getElementById('fileInput').click()">
+                    📂 Nhập File TXT
+                </button>
+                <button class="btn-primary" onclick="drawUnified('fitBounds')">
+                    ▶ Hiển thị trên Bản đồ
+                </button>
+            </div>
+            <div class="button-group" style="margin-top: 8px;">
+                <button class="btn-autocad" onclick="drawInAutoCAD()">
+                    🚀 Vẽ trong AutoCAD
+                </button>
+            </div>
+            <input type="file" id="fileInput" class="file-input" accept=".txt,.csv" multiple onchange="importTxtFiles(event)">
+        </div>
+        
+        <div class="section">
+            <div class="section-title">4. Trạng thái & Log</div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                <button class="btn-default" onclick="checkServerHealth()">🔍 Kiểm tra Server</button>
+                <span id="serverStatus" style="padding: 4px 8px; border-radius: 4px; background: rgba(240, 240, 240, 0.8); font-size: 11px; border: 1px solid rgba(221, 221, 221, 0.6);">
+                    Chưa kiểm tra
+                </span>
+            </div>
+            <div class="log-area" id="logArea">Sẵn sàng.</div>
+        </div>
+        
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+    
+    <script>
+        let coordEntries = [];
+        let allBoundaries = [];
+        const SERVER_URL = 'http://127.0.0.1:5000';
+        const DEFAULT_ZOOM_LEVEL = 19; 
+        
+        let opacityControl;
+        let measureControl; 
+
+        const CONFIG = {
+            MAP: {
+                center: [10.7769, 106.7009], 
+                zoom: 12,
+                maxZoom: 22
+            },
+            PROJ: {
+                VN2000_HCM: 'EPSG:9210', 
+                WGS84: 'EPSG:4326'
+            }
+        };
+        
+        let map, drawnLayers, baseLayer;
+        const baseLayers = {}; 
+
+        L.Control.OpacitySlider = L.Control.extend({
+            options: {
+                position: 'topright' 
+            },
+
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-control-opacity-slider leaflet-bar');
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.on(container, 'contextmenu', L.DomEvent.stop); 
+
+                const wrapper = L.DomUtil.create('div', 'leaflet-control-opacity-container', container);
+
+                this._slider = L.DomUtil.create('input', 'opacity-slider', wrapper);
+                this._slider.type = 'range';
+                this._slider.min = 0;
+                this._slider.max = 100;
+                this._slider.value = 100; 
+                this._slider.title = "Điều chỉnh độ trong suốt của bản đồ nền";
+                
+                L.DomEvent.on(this._slider, 'input', this._updateOpacity, this);
+                return container;
+            },
+
+            _updateOpacity: function () {
+                const opacity = this._slider.value / 100;
+                updateBaseLayerOpacity(opacity);
+            },
+
+            setSliderValue: function (opacity) {
+                this._slider.value = opacity * 100;
+            }
+        });
+
+        function updateBaseLayerOpacity(opacity) {
+            if (baseLayer) {
+                baseLayer.setOpacity(opacity);
+            }
+        }
+        
+        let isMeasuring = false;
+        let measurementLayer;
+        let tempMeasurePoints = [];
+        let tempPoly;
+
+        L.Control.MeasureTool = L.Control.extend({
+            options: {
+                position: 'topright'
+            },
+
+            onAdd: function (map) {
+                const container = L.DomUtil.create('div', 'leaflet-control-measure-tool leaflet-bar', L.DomUtil.create('div'));
+                container.innerHTML = '📏';
+                container.title = 'Đo Độ dài & Diện tích (Click để bắt đầu, Click phải để kết thúc)';
+                
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.on(container, 'click', this._toggleMeasure, this);
+                
+                this._container = container;
+                return container;
+            },
+
+            _toggleMeasure: function () {
+                isMeasuring = !isMeasuring;
+                if (isMeasuring) {
+                    this._container.classList.add('active');
+                    this._startMeasure();
+                    logWrite('✅ Đã bật chế độ đo lường. Click để thêm điểm. Click phải để kết thúc.');
+                } else {
+                    this._container.classList.remove('active');
+                    this._stopMeasure(true, true); 
+                    logWrite('❌ Đã tắt chế độ đo lường. Đã xoá ranh đo.');
+                }
+            },
+            
+            _stopMeasure: function (disableTool = true, clearLayer = false) { 
+                map.off('click', this._addPoint, this);
+                map.off('contextmenu', this._stopMeasure, this);
+
+                if (disableTool) {
+                    isMeasuring = false;
+                    this._container.classList.remove('active');
+                }
+                
+                if (clearLayer && measurementLayer) {
+                    map.removeLayer(measurementLayer);
+                    measurementLayer = null;
+                }
+                
+                tempMeasurePoints = [];
+                tempPoly = null; 
+            },
+
+            _startMeasure: function () {
+                this._stopMeasure(false, true); 
+                
+                measurementLayer = L.layerGroup().addTo(map);
+                tempMeasurePoints = [];
+                
+                map.on('click', this._addPoint, this);
+                
+                L.DomEvent.on(map, 'contextmenu', () => {
+                    this._stopMeasure(true, false);
+                    logWrite('Đã kết thúc đo lường bằng chuột phải. Kết quả được giữ lại trên bản đồ.');
+                }, this);
+            },
+
+            _addPoint: function (e) {
+                const latLng = e.latlng;
+                tempMeasurePoints.push(latLng);
+
+                L.circleMarker(latLng, {
+                    radius: 5,
+                    color: '#FF6B00',
+                    fillColor: '#FF6B00',
+                    fillOpacity: 1,
+                    weight: 2
+                }).addTo(measurementLayer);
+
+                this._updateMeasurement();
+            },
+            
+            _updateMeasurement: function () {
+                if (tempPoly) {
+                    measurementLayer.removeLayer(tempPoly);
+                }
+
+                if (tempMeasurePoints.length < 2) return;
+
+                const latLngs = tempMeasurePoints;
+                let totalDistance = 0;
+                let measureContent = '<b>Đo lường:</b><br>';
+                
+                let ptsVN2000 = [];
+                for(let i = 0; i < latLngs.length; i++) {
+                    const wgs84Coords = [latLngs[i].lng, latLngs[i].lat];
+                    const vn2000Coords = proj4(CONFIG.PROJ.WGS84, CONFIG.PROJ.VN2000_HCM, wgs84Coords); 
+                    ptsVN2000.push({ y: vn2000Coords[0], x: vn2000Coords[1] });
+                    
+                    if (i > 0) {
+                        const distanceToPrevious = latLngs[i - 1].distanceTo(latLngs[i]);
+                        totalDistance += distanceToPrevious;
+                    }
+                }
+
+                measureContent += `Tổng độ dài: <b>${(totalDistance / 1000).toFixed(3)} km</b><br>`;
+                
+                const isClosed = tempMeasurePoints.length >= 3 && latLngs[0].distanceTo(latLngs[latLngs.length - 1]) < 10; 
+                
+                if (tempMeasurePoints.length > 2) {
+                    if (isClosed) {
+                        const pointsForArea = [...ptsVN2000, ptsVN2000[0]]; 
+                        const areaSqM = calculatePlanarArea(pointsForArea);
+                        const areaHa = areaSqM / 10000;
+                        measureContent += `Diện tích: <b>${areaSqM.toFixed(2)} m²</b> (${areaHa.toFixed(4)} ha)`;
+                        
+                        tempPoly = L.polygon(latLngs, {
+                            color: '#FF6B00',
+                            weight: 2,
+                            fillOpacity: 0.1
+                        }).addTo(measurementLayer);
+
+                    } else {
+                        tempPoly = L.polyline(latLngs, {
+                            color: '#FF6B00',
+                            weight: 2,
+                            opacity: 0.7
+                        }).addTo(measurementLayer);
+                    }
+                }
+                
+                const markers = measurementLayer.getLayers().filter(l => l instanceof L.CircleMarker);
+                const lastMarker = markers.pop();
+                if (lastMarker) {
+                    markers.forEach(m => m.closePopup()); 
+                    lastMarker.bindPopup(measureContent).openPopup();
+                }
+            }
+        });
+
+        function calculatePlanarArea(points) {
+            if (points.length < 3) return 0;
+            let area = 0;
+            for (let i = 0; i < points.length; i++) {
+                const j = (i + 1) % points.length; 
+                area += (points[i].y * points[j].x - points[j].y * points[i].x);
+            }
+            return Math.abs(area / 2); 
+        }
+        
+        window.addEventListener('load', () => {
+            initializeApp();
+        });
+        
+        function initializeApp() {
+            if (typeof proj4 === 'undefined') {
+                logWrite('LỖI PROJ4: Thư viện Proj4 chưa được tải. Vui lòng kiểm tra kết nối mạng hoặc CDN.');
+                return;
+            }
+            
+            proj4.defs(CONFIG.PROJ.VN2000_HCM,
+                "+proj=tmerc +lat_0=0 +lon_0=105.75 +k=0.9999 " +
+                "+x_0=500000 +y_0=0 +datum=WGS84 " +
+                "+towgs84=-191.904,-39.303,-111.450,-0.009,-0.019,-0.004,0 " +
+                "+units=m +no_defs"
+            );
+            
+            map = L.map('map', {
+                attributionControl: false, 
+                whenReady: function() {
+                    setTimeout(() => {
+                        this.invalidateSize(true);
+                        logWrite("Bản đồ đã được tải và cập nhật kích thước.");
+                    }, 100); 
+                }
+            }).setView(CONFIG.MAP.center, CONFIG.MAP.zoom);
+
+            L.control.attribution({
+                prefix: 'Trung tâm Thông tin Quy hoạch TPHCM'
+            }).addTo(map);
+            
+            baseLayers['Esri Satellite (KHUYÊN DÙNG)'] = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Dữ liệu: © Esri'
+            });
+            
+            baseLayers['OpenStreetMap (Đường phố)'] = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: 'Dữ liệu: © OpenStreetMap'
+            });
+            
+            baseLayers['Google Satellite'] = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                maxZoom: CONFIG.MAP.maxZoom,
+                attribution: 'Dữ liệu: © Google'
+            });
+            
+            baseLayers['Google Hybrid'] = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                maxZoom: CONFIG.MAP.maxZoom,
+                attribution: 'Dữ liệu: © Google'
+            });
+            
+            baseLayer = baseLayers['Esri Satellite (KHUYÊN DÙNG)'].addTo(map);
+            
+            L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+
+            opacityControl = new L.Control.OpacitySlider({ position: 'topright' });
+            opacityControl.addTo(map);
+            updateBaseLayerOpacity(1.0); 
+
+            measureControl = new L.Control.MeasureTool({ position: 'topright' }).addTo(map);
+
+            document.addEventListener('keydown', (e) => {
+                if (isMeasuring && (e.key === 'Escape' || e.keyCode === 27)) {
+                    measureControl._stopMeasure(true, true); 
+                    logWrite('Đã hủy đo lường bằng phím ESC. Đã xoá ranh đo.');
+                    e.preventDefault(); 
+                }
+            });
+
+            map.on('baselayerchange', function (e) {
+                baseLayer = e.layer;
+                const currentOpacity = opacityControl._slider.value / 100;
+                baseLayer.setOpacity(currentOpacity);
+                logWrite(`Đã chuyển sang nền: ${e.name}. Opacity: ${currentOpacity.toFixed(2)}`);
+            });
+            
+            drawnLayers = L.layerGroup().addTo(map);
+            
+            for (let i = 0; i < 5; i++) {
+                addCoordEntry();
+            }
+            
+            setTimeout(checkServerHealth, 1000);
+            logWrite("Ứng dụng đã sẵn sàng.");
+        }
+        
+        function vn2000ToWGS84(y_easting, x_northing) {
+            const vn2000Coords = [y_easting, x_northing]; 
+            const wgs84Coords = proj4(CONFIG.PROJ.VN2000_HCM, CONFIG.PROJ.WGS84, vn2000Coords);
+            return [wgs84Coords[1], wgs84Coords[0]];
+        }
+
+        function determineAndSwap(num1, num2) {
+            const len1 = Math.floor(Math.abs(num1)).toString().length;
+            const len2 = Math.floor(Math.abs(num2)).toString().length;
+
+            const isNorthing1 = len1 >= 7; 
+            const isEasting1 = len1 <= 6;  
+            const isNorthing2 = len2 >= 7; 
+            const isEasting2 = len2 <= 6;  
+
+            let x, y, format;
+
+            if (isNorthing1 && isEasting2) {
+                x = num1;
+                y = num2;
+                format = 'X Y';
+            } else if (isEasting1 && isNorthing2) {
+                x = num2; 
+                y = num1; 
+                format = 'Y X (Auto Swapped)';
+            } else {
+                x = num1;
+                y = num2;
+                format = 'X Y (Mặc định)';
+            }
+
+            return { x, y, format };
+        }
+        
+        function addCoordEntry() {
+            const entry = { x: '', y: '' };
+            coordEntries.push(entry);
+            renderCoordEntries();
+        }
+        
+        function removeCoordEntry(index) {
+            coordEntries.splice(index, 1);
+            renderCoordEntries();
+            drawUnified('fitBounds'); 
+        }
+        
+        function clearAllEntries() {
+            coordEntries = [];
+            for (let i = 0; i < 5; i++) {
+                addCoordEntry();
+            }
+            drawnLayers.clearLayers();
+            if(measurementLayer) map.removeLayer(measurementLayer); 
+            if (isMeasuring && measureControl) {
+                measureControl._stopMeasure(true, true); 
+            }
+            logWrite("Đã xóa tất cả các ô nhập tọa độ và các ranh vẽ.");
+            map.flyTo(CONFIG.MAP.center, CONFIG.MAP.zoom);
+        }
+
+        function handleEntryChangeAndZoom(index, type, value) {
+            coordEntries[index][type] = value;
+            
+            const ptsManual = getManualPointsVN2000();
+            drawUnified('flyToLast'); 
+            
+            const currentEntry = coordEntries[index];
+            const x = parseFloat(currentEntry.x);
+            const y = parseFloat(currentEntry.y);
+            
+            if (!isNaN(x) && !isNaN(y)) {
+                try {
+                    const { x: correctedX, y: correctedY, format } = determineAndSwap(x, y);
+
+                    if (format.includes('Swapped')) {
+                        coordEntries[index].x = correctedX.toString();
+                        coordEntries[index].y = correctedY.toString();
+                        renderCoordEntries(); 
+                        logWrite(`> Điểm ${index + 1}: Tự động sửa lỗi Y X thành X Y.`);
+                    }
+
+                    const [lat, lng] = vn2000ToWGS84(correctedY, correctedX);
+                    map.flyTo([lat, lng], DEFAULT_ZOOM_LEVEL, { duration: 0.5 });
+                } catch (e) {
+                }
+            } else if (ptsManual.length > 0) {
+                 const lastValidPoint = ptsManual[ptsManual.length - 1];
+                 const [lat, lng] = vn2000ToWGS84(lastValidPoint.y, lastValidPoint.x);
+                 map.flyTo([lat, lng], DEFAULT_ZOOM_LEVEL, { duration: 0.5 });
+            }
+        }
+        
+        function renderCoordEntries() {
+            const table = document.getElementById('coordsTable');
+            table.innerHTML = '';
+            
+            coordEntries.forEach((entry, index) => {
+                const row = document.createElement('div');
+                row.className = 'coord-row';
+                
+                row.innerHTML = `
+                    <label>${index + 1}:</label>
+                    <span>X:</span>
+                    <input type="text" value="${entry.x}" onchange="handleEntryChangeAndZoom(${index}, 'x', this.value)" placeholder="Northing">
+                    <span>Y:</span>
+                    <input type="text" value="${entry.y}" onchange="handleEntryChangeAndZoom(${index}, 'y', this.value)" placeholder="Easting">
+                    <button onclick="removeCoordEntry(${index})">x</button>
+                `;
+                
+                table.appendChild(row);
+            });
+        }
+        
+        function logWrite(msg) {
+            const logArea = document.getElementById('logArea');
+            logArea.innerHTML += msg + '<br>';
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        function parseClipboardCoords(text) {
+            const lines = text.trim().split('\n').filter(ln => ln.trim());
+            const pts = [];
+            
+            for (const ln of lines) {
+                const nums = ln.match(/[-+]?\d+\.?\d*(?:[Ee][-+]?\d+)?/g); 
+                
+                if (nums && nums.length >= 2) {
+                    const num1 = parseFloat(nums[0]);
+                    const num2 = parseFloat(nums[1]);
+                    
+                    const { x, y, format } = determineAndSwap(num1, num2); 
+                    
+                    pts.push({ x, y });
+                    if (format.includes('Swapped')) {
+                        logWrite(`> Phát hiện và sửa lỗi định dạng Y X tại dòng: ${ln.trim().substring(0, 30)}...`);
+                    }
+                }
+            }
+            return pts;
+        }
+        
+        function parseMultipleBoundaries(text) {
+            text = text.trim().replace(/\r\n/g, '\n');
+            const blocks = text.split(/\n{2,}/);
+            const boundaries = [];
+            
+            for (const block of blocks) {
+                const trimmed = block.trim();
+                if (!trimmed) continue;
+                
+                const pts = parseClipboardCoords(trimmed); 
+                if (pts.length >= 2) {
+                    boundaries.push(pts);
+                }
+            }
+            return boundaries;
+        }
+        
+        function parseSeparateBlocksCoords(text) {
+            text = text.trim().replace(/\r\n/g, '\n');
+            const blocks = text.split(/\n{2,}/);
+            
+            if (blocks.length !== 2) return null;
+            
+            function extractNumbers(blockText) {
+                const lines = blockText.split('\n').filter(ln => ln.trim());
+                const nums = [];
+                
+                for (const line of lines) {
+                    const match = line.match(/[-+]?\d+\.?\d*(?:[Ee][-+]?\d+)?/);
+                    if (match) {
+                        nums.push(parseFloat(match[0]));
+                    }
+                }
+                return nums;
+            }
+            
+            const listA = extractNumbers(blocks[0]);
+            const listB = extractNumbers(blocks[1]);
+            
+            if (listA.length !== listB.length || listA.length < 2) {
+                return null;
+            }
+            
+            let listX, listY, logMsg;
+
+            const numA = listA[0];
+            const numB = listB[0];
+            
+            const lenA = Math.floor(Math.abs(numA)).toString().length;
+            const lenB = Math.floor(Math.abs(numB)).toString().length;
+
+            const isNorthingA = lenA >= 7; 
+            const isEastingA = lenA <= 6;  
+            const isNorthingB = lenB >= 7; 
+            const isEastingB = lenB <= 6; 
+
+            if (isNorthingA && isEastingB) {
+                listX = listA;
+                listY = listB;
+                logMsg = "Định dạng **X riêng/Y riêng** chuẩn (Northing/Easting).";
+            } else if (isEastingA && isNorthingB) {
+                listX = listB; 
+                listY = listA; 
+                logMsg = "Định dạng **Y riêng/X riêng** (Đã tự động chuyển đổi).";
+            } else {
+                listX = listA;
+                listY = listB;
+                logMsg = "Định dạng không rõ ràng (Mặc định X riêng/Y riêng).";
+            }
+
+            const pts = [];
+            for (let i = 0; i < listX.length; i++) {
+                pts.push({ x: listX[i], y: listY[i] });
+            }
+            
+            return { pts, logMsg };
+        }
+        
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('pasteArea').value = text;
+                logWrite(`Đã dán ${text.split('\n').length} dòng từ clipboard.`);
+            } catch (err) {
+                logWrite('Lỗi khi dán từ clipboard. Vui lòng dán thủ công (Ctrl+V).');
+            }
+        }
+        
+        function loadTextIntoEntries() {
+            const txt = document.getElementById('pasteArea').value;
+            let resultSeparate = parseSeparateBlocksCoords(txt);
+            let pts = null;
+            let logMsg = '';
+            
+            if (resultSeparate) {
+                pts = resultSeparate.pts;
+                logMsg = resultSeparate.logMsg;
+            } 
+            
+            if (!pts) {
+                const boundaries = parseMultipleBoundaries(txt);
+                if (boundaries.length > 0) {
+                    pts = boundaries[0];
+                    logMsg = "Đã nạp ranh đầu tiên từ định dạng **X Y cùng dòng**.";
+                } else {
+                    alert("Khung text trống hoặc không có ranh hợp lệ.");
+                    return;
+                }
+            }
+            
+            coordEntries = []; 
+            pts.forEach(pt => coordEntries.push(pt));
+            for (let i = 0; i < 5; i++) {
+                coordEntries.push({ x: '', y: '' });
+            }
+
+            renderCoordEntries();
+            drawUnified('fitBounds');
+            logWrite(`${logMsg} (${pts.length} điểm).`);
+        }
+        
+        function getManualPointsVN2000() {
+            return coordEntries.filter(e => e.x && e.y).map(e => ({
+                x: parseFloat(e.x), 
+                y: parseFloat(e.y)  
+            })).filter(e => !isNaN(e.x) && !isNaN(e.y)); 
+        }
+        
+        function drawUnified(zoomBehavior = 'fitBounds') {
+            allBoundaries = [];
+            
+            const ptsManual = getManualPointsVN2000();
+            if (ptsManual.length >= 2) {
+                allBoundaries.push(ptsManual);
+                if (zoomBehavior === 'fitBounds') { 
+                    logWrite("> Tìm thấy 1 ranh từ Bảng nhập tay.");
+                }
+            }
+            
+            const txt = document.getElementById('pasteArea').value;
+            const ptsSeparate = parseSeparateBlocksCoords(txt);
+            
+            if (ptsSeparate && ptsManual.length === 0) { 
+                allBoundaries.push(ptsSeparate.pts);
+                if (zoomBehavior === 'fitBounds') {
+                    logWrite(`> Thêm 1 ranh từ Khung text (${ptsSeparate.logMsg}).`);
+                }
+            } else if (ptsManual.length === 0) {
+                const ptsText = parseMultipleBoundaries(txt);
+                if (ptsText.length > 0) {
+                    allBoundaries.push(...ptsText);
+                    if (zoomBehavior === 'fitBounds') {
+                        logWrite(`> Thêm ${ptsText.length} ranh từ Khung text (Định dạng X Y cùng dòng).`);
+                    }
+                }
+            }
+            
+            if (allBoundaries.length === 0) {
+                if (zoomBehavior === 'fitBounds') {
+                    if (document.getElementById('pasteArea').value.trim() !== '') {
+                        alert("Không có toạ độ nào hợp lệ để vẽ. Vui lòng kiểm tra định dạng.");
+                    } else {
+                        logWrite("Không có toạ độ nào để vẽ.");
+                    }
+                }
+                drawnLayers.clearLayers();
+                return;
+            }
+            
+            drawOnMap(zoomBehavior);
+            
+            if (zoomBehavior === 'fitBounds' && drawnLayers.getLayers().length > 0) {
+                setTimeout(() => {
+                    map.fitBounds(drawnLayers.getBounds(), { 
+                        padding: [50, 50],
+                        maxZoom: 18,
+                        animate: true,
+                        duration: 0.8
+                    });
+                }, 100);
+                logWrite(`=== Đã hiển thị ${allBoundaries.length} ranh và zoom đến vị trí. ===`);
+            } else if (zoomBehavior === 'fitBounds') {
+                logWrite(`=== Đã hiển thị ${allBoundaries.length} ranh trên bản đồ. ===`);
+            }
+        }
+        
+        function drawOnMap(zoomBehavior = 'fitBounds') {
+            drawnLayers.clearLayers();
+            
+            const colors = ['#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#00FFFF', '#FFFF00'];
+            let lastPointLatLng = null; 
+            
+            allBoundaries.forEach((boundary, idx) => {
+                const latLngs = boundary.map(pt => {
+                    return vn2000ToWGS84(pt.y, pt.x);
+                });
+                
+                const color = colors[idx % colors.length];
+                
+                let shape = L.polygon(latLngs, {
+                    color: color,
+                    weight: 3,
+                    fillOpacity: 0.2
+                });
+                
+                shape.bindPopup(`<b>Ranh ${idx + 1}</b><br>${boundary.length} điểm`);
+                shape.addTo(drawnLayers);
+
+                shape.on('click', function(e) {
+                    map.flyTo(this.getBounds().getCenter(), DEFAULT_ZOOM_LEVEL, { duration: 0.5 });
+                    this.openPopup();
+                });
+                
+                latLngs.forEach((latLng, i) => {
+                    const marker = L.circleMarker(latLng, {
+                        radius: 4,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 1,
+                        fillOpacity: 1
+                    }).bindPopup(`Điểm ${i + 1}<br>X=${boundary[i].x.toFixed(2)}<br>Y=${boundary[i].y.toFixed(2)}`).addTo(drawnLayers);
+
+                    marker.on('click', function(e) {
+                        map.flyTo(e.latlng, DEFAULT_ZOOM_LEVEL, { duration: 0.5 });
+                        this.openPopup();
+                    });
+                });
+
+                if (idx === allBoundaries.length - 1) {
+                    lastPointLatLng = latLngs[latLngs.length - 1];
+                }
+            });
+        }
+        
+        function exportToTxt() {
+            const pts = getManualPointsVN2000();
+            if (pts.length === 0) {
+                alert("Bảng nhập liệu trống.");
+                return;
+            }
+            
+            let content = '';
+            pts.forEach(pt => {
+                content += `${pt.x} ${pt.y}\n`;
+            });
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'toa_do_VN2000.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            logWrite(`Đã xuất ${pts.length} điểm ra file TXT.`);
+        }
+        
+        function importTxtFiles(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+            
+            logWrite(`Đang xử lý ${files.length} file...`);
+            let combinedContent = '';
+            let processed = 0;
+            
+            Array.from(files).forEach((file, idx) => {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    if (combinedContent) combinedContent += '\n\n';
+                    combinedContent += e.target.result.trim();
+                    logWrite(`    > Đọc thành công file ${idx + 1}/${files.length}: ${file.name}`);
+                    
+                    processed++;
+                    if (processed === files.length) {
+                        document.getElementById('pasteArea').value = combinedContent;
+                        drawUnified('fitBounds'); 
+                        logWrite("✓ Tổng hợp dữ liệu thành công. Đã tự động hiển thị và **zoom tổng thể** trên Bản đồ.");
+                    }
+                };
+                
+                reader.onerror = () => {
+                    logWrite(`    > LỖI khi đọc file ${file.name}`);
+                    processed++;
+                };
+                
+                reader.readAsText(file, 'utf-8');
+            });
+        }
+        
+        async function checkServerHealth() {
+            const statusEl = document.getElementById('serverStatus');
+            statusEl.textContent = 'Đang kiểm tra...';
+            statusEl.style.background = '#FFF59D';
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/health`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const autocadInstalled = data.autocad.installed;
+                    const autocadVersion = data.autocad.version;
+                    
+                    if (autocadInstalled) {
+                        statusEl.textContent = `✅ Server OK | AutoCAD ${autocadVersion}`;
+                        statusEl.style.background = '#C8E6C9';
+                        statusEl.style.color = '#1B5E20';
+                        logWrite(`Server sẵn sàng. AutoCAD phiên bản: ${autocadVersion}`);
+                    } else {
+                        statusEl.textContent = '⚠️ Server OK nhưng AutoCAD chưa cài';
+                        statusEl.style.background = '#FFE082';
+                        statusEl.style.color = '#E65100';
+                        logWrite('Server hoạt động nhưng không tìm thấy AutoCAD.');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ Server không phản hồi';
+                statusEl.style.background = '#FFCDD2';
+                statusEl.style.color = '#B71C1C';
+                logWrite(`Lỗi kết nối server: ${error.message}`);
+                logWrite('Đảm bảo đã chạy: python autocad_server.py');
+            }
+        }
+        
+        async function drawInAutoCAD() {
+            drawUnified('none');
+            
+            if (allBoundaries.length === 0) {
+                alert('Không có dữ liệu để vẽ!\n\nVui lòng:\n1. Nhập tọa độ vào bảng, HOẶC\n2. Dán tọa độ vào khung text\n3. Nhấn "Hiển thị trên Bản đồ" trước');
+                return;
+            }
+            
+            const layerName = document.getElementById('layerName').value || 'RANH';
+            const isClosed = document.getElementById('closedCheck').checked;
+            
+            logWrite('='.repeat(50));
+            logWrite('🚀 BẮT ĐẦU GỬI DỮ LIỆU ĐẾN AUTOCAD SERVER...');
+            
+            try {
+                const healthCheck = await fetch(`${SERVER_URL}/health`);
+                if (!healthCheck.ok) {
+                    throw new Error('Server không phản hồi. Vui lòng chạy: python autocad_server.py');
+                }
+                
+                const healthData = await healthCheck.json();
+                if (!healthData.autocad.installed) {
+                    alert('⚠️ AutoCAD chưa được cài đặt!\n\nServer đang chạy nhưng không tìm thấy AutoCAD trên máy.');
+                    return;
+                }
+                
+                if (allBoundaries.length === 1) {
+                    const points = allBoundaries[0].map(pt => [pt.y, pt.x]); 
+                    const response = await fetch(`${SERVER_URL}/open-autocad`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            points: points,
+                            closed: isClosed,
+                            layer: layerName
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        logWrite('✅ VẼ THÀNH CÔNG TRONG AUTOCAD!');
+                        alert(`✅ Đã vẽ thành công!\n\n${result.message}`);
+                    } else {
+                        throw new Error(result.error || 'Lỗi không xác định');
+                    }
+                    
+                } else {
+                    const entities = allBoundaries.map((boundary, idx) => ({
+                        points: boundary.map(pt => [pt.y, pt.x]), 
+                        closed: isClosed,
+                        layer: `${layerName}_${idx + 1}`
+                    }));
+                    
+                    const response = await fetch(`${SERVER_URL}/open-autocad-multiple`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            entities: entities
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        logWrite('✅ VẼ THÀNH CÔNG TẤT CẢ RANH!');
+                        alert(`✅ Đã vẽ thành công ${result.entities.length} ranh!\n\n${result.message}`);
+                    } else {
+                        throw new Error(result.error || 'Lỗi không xác định');
+                    }
+                }
+                
+            } catch (error) {
+                logWrite('❌ LỖI KHI VẼ TRONG AUTOCAD:');
+                logWrite(error.message);
+                
+                let errorMsg = `❌ Không thể vẽ trong AutoCAD!\n\nLỗi: ${error.message}\n\n`;
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('Server không phản hồi')) {
+                    errorMsg += 'Giải pháp:\n';
+                    errorMsg += '1. Mở Terminal/Command Prompt\n';
+                    errorMsg += '2. Chạy lệnh: python autocad_server.py\n';
+                    errorMsg += '3. Đợi server khởi động\n';
+                    errorMsg += '4. Thử lại';
+                } else if (error.message.includes('Document hop le')) {
+                    errorMsg += 'Giải pháp:\n';
+                    errorMsg += '1. Mở AutoCAD\n';
+                    errorMsg += '2. Tạo/Mở một file DWG\n';
+                    errorMsg += '3. Thử lại';
+                }
+                
+                alert(errorMsg);
+            }
+            
+            logWrite('='.repeat(50));
+        }
+    </script>
+</body>
+</html>
