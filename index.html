@@ -1288,6 +1288,7 @@
                             points: points,
                             closed: isClosed,
                             layer: layerName
+                            zoom_to_boundary: true,
                         })
                     });
                     
@@ -1314,6 +1315,7 @@
                         },
                         body: JSON.stringify({
                             entities: entities
+                            zoom_to_boundary: true
                         })
                     });
                     
@@ -1353,4 +1355,5 @@
         }
     </script>
 </body>
+
 </html>
