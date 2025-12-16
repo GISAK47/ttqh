@@ -1287,8 +1287,9 @@
                         body: JSON.stringify({
                             points: points,
                             closed: isClosed,
-                            layer: layerName
-                            zoom_to_boundary: true,
+                            layer: layerName,
+			    zoom_to_boundary: true,
+
                         })
                     });
                     
@@ -1314,8 +1315,8 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            entities: entities
-                            zoom_to_boundary: true
+                            entities: entities,
+			    zoom_to_boundary: true
                         })
                     });
                     
@@ -1355,5 +1356,4 @@
         }
     </script>
 </body>
-
 </html>
